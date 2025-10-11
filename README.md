@@ -126,7 +126,8 @@ options:
   -l, --list-parsers    just list available parsers and their descriptions
   -V, --version         just show pkglog version
 
-Note you can set default starting options in ~/.config/pkglog-flags.conf.
+Note you can set default starting options in $HOME/.config/pkglog-
+flags.conf.
 ```
 
 ## Installed Net Output Options

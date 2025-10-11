@@ -6,14 +6,13 @@ from __future__ import annotations
 
 import fileinput
 import fnmatch
-import os
 import re
-import shlex
 import sys
-from argparse import ArgumentParser, Namespace
 from datetime import date, datetime, time, timedelta
 from importlib import util
 from pathlib import Path
+
+from argparse_from_file import ArgumentParser, Namespace
 
 TIMEGAP = 2  # mins
 PATHSEP = ':'
@@ -41,7 +40,6 @@ ACTIONS = {
 }
 
 MODDIR = Path(__file__).parent.resolve()
-CNFFILE = Path(os.getenv('XDG_CONFIG_HOME', '~/.config'), f'{MODDIR.name}-flags.conf')
 
 
 class Queue:
@@ -196,10 +194,7 @@ def main() -> None:
             def_module = m.stem
 
     # Process command line options
-    opt = ArgumentParser(
-        description=__doc__,
-        epilog=f'Note you can set default starting options in {CNFFILE}.',
-    )
+    opt = ArgumentParser(description=__doc__)
     grp = opt.add_mutually_exclusive_group()
     grp.add_argument(
         '-u', '--updated-only', action='store_true', help='show updated only'
@@ -304,17 +299,7 @@ def main() -> None:
     )
     opt.add_argument('package', nargs='*', help='specific package name[s] to report')
 
-    # Merge in default options from user config file. Then parse the
-    # command line.
-    cnffile = CNFFILE.expanduser()
-    if cnffile.exists():
-        with cnffile.open() as fp:
-            cnflinesl = [re.sub(r'#.*$', '', line).strip() for line in fp]
-        cnflines = ' '.join(cnflinesl).strip()
-    else:
-        cnflines = ''
-
-    args = opt.parse_args(shlex.split(cnflines) + sys.argv[1:])
+    args = opt.parse_args()
 
     if args.version:
         from importlib.metadata import version
