@@ -4,6 +4,7 @@
 ### KEY DIFFERENCES:
 - rewrite in a different language
 - only supports arch linux/pacman
+
 ====================================
 
 This is a Linux command line utility to output a concise list of
