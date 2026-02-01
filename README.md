@@ -1,6 +1,10 @@
-## PKGLOG - Linux utility to output concise log of package changes
-[![PyPi](https://img.shields.io/pypi/v/pkglog)](https://pypi.org/project/pkglog/)
-[![AUR](https://img.shields.io/aur/version/pkglog)](https://aur.archlinux.org/packages/pkglog/)
+## PKGLOG (pkglog-elixir fork of bulletmark/pkglog)
+
+====================================
+### KEY DIFFERENCES:
+- rewrite in a different language
+- only supports arch linux/pacman
+====================================
 
 This is a Linux command line utility to output a concise list of
 packages installed, removed, upgraded, downgraded, or reinstalled. It
@@ -59,17 +63,8 @@ that option disabled as a [default option](#default-options).
 
 Parsers for the following log formats currently exist. The appropriate
 parser for you system is normally automatically determined.
-Alternatively, you can choose the log file path[s], and/or parser
-explicitly. You can also set these as [default
+Alternatively, you can choose the log file path[s] explicitly. You can also set these as [default
 options](#default-options).
-
-A very simple parser plugin architecture is used, so creating a new
-parser is easy. Use the `-f/--parser-file` option to explicitly specify
-the path to your custom parser for development. By default, parsers are
-loaded from the `parsers/` sub-directory so, if cloning, forking, or
-submitting a PR for the software, then simply place your custom parser
-file in that directory and the program will automatically recognise it.
-See the [current parsers](pkglog/parsers) for example code.
 
 |Log Parser|Default Path           |Distribution       |
 |----------|-----------------------|-------------------|
@@ -85,9 +80,8 @@ Type `pkglog -h` to view the usage summary:
 
 ```
 usage: pkglog [-h] [-u | -i | -I | -n] [-N INSTALLED_NET_DAYS] [-d DAYS]
-                   [-a] [-b] [-j] [-v] [-c] [-p {pacman,zypper,apt,xbps,dnf} |
-                   -f PARSER_PLUGIN] [-t TIMEGAP] [-P PATH] [-g | -r] [-l]
-                   [-V]
+                   [-a] [-b] [-j] [-v] [-c] [-t TIMEGAP]
+                   [-p PATH] [-g | -r] [-V]
                    [package ...]
 
 Reports concise log of package changes.
@@ -113,17 +107,12 @@ options:
   -j, --nojustify       don't right justify version numbers
   -v, --verbose         be verbose, describe upgrades/downgrades
   -c, --no-color        do not color output lines
-  -p, --parser {pacman,zypper,apt,xbps,dnf}
-                        log parser type, default=pacman
-  -f, --parser-plugin PARSER_PLUGIN
-                        path to alternate custom parser plugin file
   -t, --timegap TIMEGAP
                         max minutes gap between grouped changes, default=2
-  -P, --path PATH       alternate log path[s] (separate multiple using ":",
+  -p, --path PATH       alternate log path[s] (separate multiple using ":",
                         must be time sequenced)
   -g, --glob            given package name[s] is glob pattern to match
   -r, --regex           given package name[s] is regular expression to match
-  -l, --list-parsers    just list available parsers and their descriptions
   -V, --version         just show pkglog version
 
 Note you can set default starting options in $HOME/.config/pkglog-
@@ -169,9 +158,7 @@ to your `pkglog` command line options.
 This allow you to set default preferred starting options to `pkglog`.
 Type `pkglog -h` to see the options supported.
 E.g. `echo "--days 7" >~/.config/pkglog-flags.conf` to make `pkglog`
-only display the last 7 days of changes by default. This is also useful
-to set your parser explicitly using `-p/--parser` (e.g. if the default
-parser is not automatically determined correctly on your system).
+only display the last 7 days of changes by default.
 
 ## Installation
 
