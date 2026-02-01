@@ -1,10 +1,5 @@
-README.html
-build/
-dist/
-logs/
 .idea/
 .vscode/
 .zed/
-*.egg-info/
-*.pyc
-__pycache__/
+_build/
+pkglog
