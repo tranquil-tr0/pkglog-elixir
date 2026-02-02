@@ -1,4 +1,5 @@
 ## PKGLOG (pkglog-elixir fork of bulletmark/pkglog)
+https://aur.archlinux.org/packages/pkglog-elixir-bin
 
 ====================================
 ### KEY DIFFERENCES:
