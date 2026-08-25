@@ -53,7 +53,9 @@ defmodule Pkglog do
       config: config,
       boot_time: boot_time,
       boot_str: boot_str,
-      boot_printed: false
+      boot_printed: false,
+      # Packages explicitly installed per pacman local DB (loaded when needed)
+      explicit_pkgs: if(config.explicit_net, do: get_explicit_packages(), else: nil)
     }
 
     final_state = 
@@ -61,15 +63,73 @@ defmodule Pkglog do
         process_file(file, parser_mod, start_time, state)
       end)
 
-    final_state = output_queue(final_state, true)
+    final_state = output_queue(final_state)
 
     if !final_state.boot_printed and !config.boot and final_state.last_dt do
        print_boot_marker(final_state, trailing: false)
     end
   end
 
-  defp determine_parser(name) when is_binary(name) do
-    Map.get(@parsers, name) || System.halt(1) # TODO: Error message
+  @doc """
+  Return a MapSet of packages currently explicitly installed, according to
+  pacman's local database (/var/lib/pacman/local/*/desc). Install Reason 0
+  means explicitly installed; 1 means installed as a dependency.
+  """
+  def get_explicit_packages(db_dir \\ "/var/lib/pacman/local") do
+    case File.ls(db_dir) do
+      {:ok, entries} ->
+        Enum.reduce(entries, MapSet.new(), fn entry, acc ->
+          desc_path = Path.join([db_dir, entry, "desc"])
+
+          if File.regular?(desc_path) do
+            case parse_desc(desc_path) do
+              {pkg, :explicit} -> MapSet.put(acc, pkg)
+              _ -> acc
+            end
+          else
+            acc
+          end
+        end)
+
+      {:error, reason} ->
+        IO.puts(
+          "ERROR: Can not read pacman database at #{db_dir} (#{reason}) to determine explicit installs."
+        )
+
+        System.halt(1)
+    end
+  end
+
+  defp parse_desc(path) do
+    case File.read(path) do
+      {:ok, content} ->
+        lines = String.split(content, "\n")
+
+        name =
+          with idx when idx != nil <- Enum.find_index(lines, &(&1 == "%NAME%")),
+               n <- Enum.at(lines, idx + 1),
+               true <- is_binary(n) and n != "" do
+            n
+          else
+            _ -> nil
+          end
+
+        reason =
+          with idx when idx != nil <- Enum.find_index(lines, &(&1 == "%REASON%")) do
+            Enum.at(lines, idx + 1)
+          else
+            _ -> nil
+          end
+
+        if is_binary(name) and name != "" and reason in [nil, "0"] do
+          {name, :explicit}
+        else
+          nil
+        end
+
+      _ ->
+        nil
+    end
   end
 
   defp determine_parser(nil) do
@@ -87,6 +147,7 @@ defmodule Pkglog do
   end
 
   defp compute_start_time(-1), do: nil # All days
+  defp compute_start_time("-1"), do: nil # All days (string form)
   defp compute_start_time(days_str) when is_binary(days_str) do
     case Integer.parse(days_str) do
       {days, ""} ->
@@ -165,7 +226,7 @@ defmodule Pkglog do
       {:ok, dt, new_parser_state} ->
         state = %{state | parser_state: new_parser_state}
         
-        if (start_time && NaiveDateTime.compare(dt, start_time) == :lt) or
+        if (start_time && NaiveDateTime.compare(dt, start_time) == :lt) ||
            (state.config.boot && NaiveDateTime.compare(dt, state.boot_time) == :lt) do
            state
         else
@@ -174,7 +235,7 @@ defmodule Pkglog do
                 NaiveDateTime.diff(dt, state.last_dt, :second) > state.config.timegap * 60 &&
                 !state.config.installed_net do
                 
-                output_queue(state, true)
+                output_queue(state)
              else
                 state
              end
@@ -213,7 +274,7 @@ defmodule Pkglog do
     %{state | queue: state.queue ++ [{dt, action, pkg, ver}]}
   end
 
-  defp output_queue(state, _flush \\ false) do
+  defp output_queue(state) do
     if state.queue == [] do
       state
     else
@@ -279,6 +340,8 @@ defmodule Pkglog do
          state.config.updated_only and action != "upgraded" and action != "downgraded" -> false
          state.config.installed and action != "installed" and action != "removed" -> false
          state.config.installed_only and action != "installed" -> false
+
+         state.config.explicit_net and !MapSet.member?(state.explicit_pkgs, pkg) -> false
          
          state.config.packages != [] ->
             Enum.any?(state.config.packages, fn arg_pkg ->
