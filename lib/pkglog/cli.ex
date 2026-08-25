@@ -43,6 +43,7 @@ defmodule Pkglog.CLI do
           u: :updated_only,
           i: :installed,
           I: :installed_only,
+          e: :explicit_net,
           p: :path,
           g: :glob,
           r: :regex,
@@ -84,6 +85,7 @@ defmodule Pkglog.CLI do
       installed: opts[:installed] || opts[:installed_net] || false,
       installed_only: opts[:installed_only] || false,
       installed_net: opts[:installed_net] || false,
+      explicit_net: opts[:explicit_net] || false,
       installed_net_days: opts[:installed_net_days] || 2.0,
       path: opts[:path],
       nojustify: opts[:nojustify] || false,
@@ -101,7 +103,7 @@ defmodule Pkglog.CLI do
         bright(),
         "usage: pkglog ",
         yellow(),
-        "[-h] [-u | -i | -I | -n] [-d DAYS] [-a] [-b] [-j] [-v] [-c]",
+        "[-h] [-u | -i | -I | -n] [-e] [-d DAYS] [-a] [-b] [-j] [-v] [-c]",
         IO.ANSI.format_fragment(
           [" ", yellow(), "[-p PATH] [-g | -r] [-t TIMEGAP] [-N DAYS] [-V]\n"],
           true
@@ -125,6 +127,8 @@ defmodule Pkglog.CLI do
         "  show installed only\n",
         IO.ANSI.format_fragment([yellow(), "  -n, --installed-net"], true),
         "   show net installed only\n",
+        IO.ANSI.format_fragment([yellow(), "  -e, --explicit-net"], true),
+        "      show currently installed explicit installs only\n",
         IO.ANSI.format_fragment([yellow(), "  -d, --days DAYS"], true),
         "       show all packages only from given number of days ago,\n",
         "                            or from given YYYY-MM-DD, default=30\n",
