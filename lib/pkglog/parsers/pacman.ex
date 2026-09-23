@@ -48,14 +48,38 @@ defmodule Pkglog.Parsers.Pacman do
 
   @impl true
   def get_packages(line_content) do
-    # content: "upgraded package (1.0 -> 1.1)"
-    # or "installed package (1.0)"
-    case String.split(line_content, " ", parts: 3) do
-      [action, pkg, ver_raw] ->
-        ver = String.trim_trailing(ver_raw) |> String.trim_trailing(")") |> String.trim_leading("(")
-        {[{action, pkg, ver}], ""}
-      _ ->
-        {[], ""}
+    line_content = String.trim_trailing(line_content)
+
+    cond do
+      # e.g. Running 'pacman --sync --asdeps -- dolphin-plugins ffmpegthumbs'
+      # (capital "Running"; lowercase "running 'hook'..." ALPM lines are NOT
+      # pacman commands and must fall through to be ignored)
+      String.starts_with?(line_content, "Running '") ->
+        cmd =
+          line_content
+          |> String.trim_leading("Running '")
+          |> String.trim_trailing("'")
+
+        {[{"pacman_running", cmd, ""}], ""}
+
+      line_content in ["transaction started", "transaction completed"] ->
+        {[{line_content, "", ""}], ""}
+
+      true ->
+        # content: "upgraded package (1.0 -> 1.1)"
+        # or "installed package (1.0)"
+        case String.split(line_content, " ", parts: 3) do
+          [action, pkg, ver_raw] ->
+            ver =
+              ver_raw
+              |> String.trim_trailing(")")
+              |> String.trim_leading("(")
+
+            {[{action, pkg, ver}], ""}
+
+          _ ->
+            {[], ""}
+        end
     end
   end
 end

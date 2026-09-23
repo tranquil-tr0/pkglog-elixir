@@ -121,6 +121,25 @@ Note you can set default starting options in $HOME/.config/pkglog-
 flags.conf.
 ```
 
+## Pacman Actions
+
+The `-P/--pacman-actions` option shows only package operations that were
+explicitly performed by a pacman command. pkglog correlates each `[ALPM]`
+transaction in `pacman.log` with the recorded `[PACMAN] Running '...'`
+command that precedes it:
+
+- Packages pulled in as dependencies of another operation (i.e. not named
+  on the pacman command line) are not shown.
+- Packages installed with `--asdeps` are shown as
+  `installed as dependency` (in blue) instead of `installed`.
+- Reinstalled and individually updated packages are shown as usual, and a
+  full system upgrade (`pacman -Syu`) still shows all its updates.
+- `pacman -D --asexplicit` / `pacman -D --asdeps` are shown as
+  `marked as explicit` / `marked as dependency`.
+- When packages are uninstalled, the uninstallation of their auto-removed
+  dependencies is not shown, except for dependencies which were earlier
+  installed as a dependency or marked as a dependency.
+
 ## Installed Net Output Options
 
 The purpose of the `-n/--installed-net` option is perhaps not
