@@ -64,7 +64,7 @@ defmodule Pkglog.CLI do
     end
 
     if opts[:version] do
-      IO.puts("pkglog 0.1.0")
+      IO.puts("pkglog #{version()}")
       System.halt(0)
     end
 
@@ -96,6 +96,13 @@ defmodule Pkglog.CLI do
     }
 
     config
+  end
+
+  defp version do
+    case Application.spec(:pkglog, :vsn) do
+      nil -> Mix.Project.config()[:version] || "unknown"
+      vsn -> to_string(vsn)
+    end
   end
 
   defp print_help do
