@@ -154,22 +154,53 @@ defmodule Pkglog do
   defp compute_start_time(days_str) when is_binary(days_str) do
     case Integer.parse(days_str) do
       {days, ""} ->
-        if days == 0 do
-           NaiveDateTime.beginning_of_day(NaiveDateTime.local_now())
-        else
-           Date.add(Date.utc_today(), -days) |> NaiveDateTime.new!(~T[00:00:00])
-        end
+        local_today()
+        |> Date.add(-days)
+        |> NaiveDateTime.new!(~T[00:00:00])
       _ ->
-        # Assuming YYYY-MM-DD
-        case Date.from_iso8601(days_str) do
-          {:ok, date} -> NaiveDateTime.new!(date, ~T[00:00:00])
-          _ -> 
+        # YYYY-MM-DD[ HH:MM[:SS]] or HH:MM[:SS] (today assumed)
+        case parse_start_time(days_str) do
+          {:ok, dt} -> dt
+          _ ->
              IO.puts("ERROR: Can not parse days value.")
              System.halt(1)
         end
     end
   end
   defp compute_start_time(_), do: nil
+
+  defp parse_start_time(str) do
+    case String.split(str, [" ", "T"], parts: 2) do
+      [date] ->
+        case Date.from_iso8601(date) do
+          {:ok, d} -> {:ok, NaiveDateTime.new!(d, ~T[00:00:00])}
+          _ -> bare_time_today(date)
+        end
+
+      [date, time] ->
+        with {:ok, d} <- Date.from_iso8601(date),
+             {:ok, t} <- parse_time(time) do
+          {:ok, NaiveDateTime.new!(d, t)}
+        end
+    end
+  end
+
+  defp bare_time_today(str) do
+    with {:ok, t} <- parse_time(str) do
+      {:ok, NaiveDateTime.new!(local_today(), t)}
+    end
+  end
+
+  # Same wall-clock basis as the log timestamps shown in the output
+  defp local_today(), do: NaiveDateTime.local_now() |> NaiveDateTime.to_date()
+
+  # Time.from_iso8601/1 requires seconds, so accept HH:MM as well
+  defp parse_time(str) do
+    case Time.from_iso8601(str) do
+      {:ok, t} -> {:ok, t}
+      _ -> Time.from_iso8601(str <> ":00")
+    end
+  end
 
   defp get_boot_time() do
     {uptime_str, 0} = System.cmd("cat", ["/proc/uptime"])
