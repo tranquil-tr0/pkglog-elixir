@@ -1,9 +1,16 @@
 defmodule Pkglog.CLI do
   def main(args) do
+    # silence the runtime's "Writer crashed (:epipe)" report when stdout closes
+    :logger.set_primary_config(:level, :none)
+
     args
     |> parse_args()
     |> process_options()
     |> Pkglog.run()
+  rescue
+    # stdout closed early (e.g. piped into `head`): exit quietly
+    e in ErlangError ->
+      if e.original == :terminated, do: System.halt(0), else: reraise(e, __STACKTRACE__)
   end
 
   def parse_args(args) do
