@@ -23,6 +23,7 @@ defmodule Pkglog.CLI do
           updated_only: :boolean,
           installed: :boolean,
           installed_only: :boolean,
+          explicit_net: :boolean,
           path: :string,
           glob: :boolean,
           regex: :boolean,
