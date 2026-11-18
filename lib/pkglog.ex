@@ -12,24 +12,28 @@ defmodule Pkglog do
     start_time = compute_start_time(config.days)
     boot_time = get_boot_time()
 
-    config = 
+    config =
       if config.packages != [] do
-        packages = 
+        packages =
           Enum.map(config.packages, fn pkg ->
             cond do
-              config.glob -> 
-                pattern = 
+              config.glob ->
+                pattern =
                   pkg
                   |> String.replace(".", "\\.")
                   |> String.replace("*", ".*")
                   |> String.replace("?", ".")
+
                 Regex.compile!("^#{pattern}$")
-              config.regex -> 
+
+              config.regex ->
                 Regex.compile!(pkg)
-              true -> 
+
+              true ->
                 pkg
             end
           end)
+
         %{config | packages: packages}
       else
         config
@@ -37,11 +41,11 @@ defmodule Pkglog do
 
     files = get_log_files(parser_mod.logfile(), config)
 
-    boot_str = 
+    boot_str =
       if config.packages == [] and !config.boot do
-         "#{format_boot_time(boot_time)} ### LAST SYSTEM BOOT ###"
+        "#{format_boot_time(boot_time)} ### LAST SYSTEM BOOT ###"
       else
-         nil
+        nil
       end
 
     initial_state = %{
@@ -61,7 +65,7 @@ defmodule Pkglog do
       pkg_status: %{}
     }
 
-    final_state = 
+    final_state =
       Enum.reduce(files, initial_state, fn file, state ->
         process_file(file, parser_mod, start_time, state)
       end)
@@ -69,7 +73,7 @@ defmodule Pkglog do
     final_state = output_queue(final_state)
 
     if !final_state.boot_printed and !config.boot and final_state.last_dt do
-       print_boot_marker(final_state, trailing: false)
+      print_boot_marker(final_state, trailing: false)
     end
   end
 
@@ -136,37 +140,46 @@ defmodule Pkglog do
   end
 
   defp determine_parser(nil) do
-    found = 
+    found =
       Enum.find(@parsers, fn {_name, mod} ->
         File.exists?(mod.logfile())
       end)
-    
+
     case found do
-      {_name, mod} -> mod
-      nil -> 
+      {_name, mod} ->
+        mod
+
+      nil ->
         IO.puts("ERROR: Can not determine log parser for this system.")
         System.halt(1)
     end
   end
 
-  defp compute_start_time(-1), do: nil # All days
-  defp compute_start_time("-1"), do: nil # All days (string form)
+  # All days
+  defp compute_start_time(-1), do: nil
+  # All days (string form)
+  defp compute_start_time("-1"), do: nil
+
   defp compute_start_time(days_str) when is_binary(days_str) do
     case Integer.parse(days_str) do
       {days, ""} ->
         local_today()
         |> Date.add(-days)
         |> NaiveDateTime.new!(~T[00:00:00])
+
       _ ->
         # YYYY-MM-DD[ HH:MM[:SS]] or HH:MM[:SS] (today assumed)
         case parse_start_time(days_str) do
-          {:ok, dt} -> dt
+          {:ok, dt} ->
+            dt
+
           _ ->
-             IO.puts("ERROR: Can not parse days value.")
-             System.halt(1)
+            IO.puts("ERROR: Can not parse days value.")
+            System.halt(1)
         end
     end
   end
+
   defp compute_start_time(_), do: nil
 
   defp parse_start_time(str) do
@@ -206,7 +219,7 @@ defmodule Pkglog do
     {uptime_str, 0} = System.cmd("cat", ["/proc/uptime"])
     [uptime_sec | _] = String.split(uptime_str, " ")
     {sec, _} = Float.parse(uptime_sec)
-    
+
     NaiveDateTime.add(NaiveDateTime.local_now(), -trunc(sec), :second)
   end
 
@@ -217,39 +230,46 @@ defmodule Pkglog do
       path = Path.expand(logfile)
       dir = Path.dirname(path)
       base = Path.basename(path)
-      
-      files = 
+
+      files =
         case File.ls(dir) do
           {:ok, list} ->
             list
             |> Enum.filter(fn f -> String.starts_with?(f, base) end)
-            |> Enum.sort_by(fn f -> 
-               case Regex.run(~r/\.(\d+)(?:\.gz)?$/, f) do
-                 [_, num] -> String.to_integer(num)
-                 nil -> 0 # The main file
-               end
-            end, :desc) # Python: reverse=True (biggest number first = oldest)
+            |> Enum.sort_by(
+              fn f ->
+                case Regex.run(~r/\.(\d+)(?:\.gz)?$/, f) do
+                  [_, num] -> String.to_integer(num)
+                  # The main file
+                  nil -> 0
+                end
+              end,
+              # Python: reverse=True (biggest number first = oldest)
+              :desc
+            )
             |> Enum.map(&Path.join(dir, &1))
-          {:error, _} -> []
+
+          {:error, _} ->
+            []
         end
-        
+
       if files == [], do: [path], else: files
     end
   end
 
   defp process_file(path, parser_mod, start_time, state) do
     if !File.exists?(path) do
-       IO.puts("ERROR: #{path} does not exist.")
-       System.halt(1)
+      IO.puts("ERROR: #{path} does not exist.")
+      System.halt(1)
     end
-    
-    stream = 
+
+    stream =
       if String.ends_with?(path, ".gz") do
         File.stream!(path, [:read, :compressed])
       else
         File.stream!(path)
       end
-      
+
     Enum.reduce(stream, state, fn line, acc ->
       process_line(line, parser_mod, start_time, acc)
     end)
@@ -259,38 +279,37 @@ defmodule Pkglog do
     case parser_mod.parse_line(line, state.parser_state) do
       {:ok, dt, new_parser_state} ->
         state = %{state | parser_state: new_parser_state}
-        
+
         if (start_time && NaiveDateTime.compare(dt, start_time) == :lt) ||
-           (state.config.boot && NaiveDateTime.compare(dt, state.boot_time) == :lt) do
-           state
+             (state.config.boot && NaiveDateTime.compare(dt, state.boot_time) == :lt) do
+          state
         else
-           state = 
-             if state.last_dt &&
-                NaiveDateTime.diff(dt, state.last_dt, :second) > state.config.timegap * 60 &&
-                !state.config.installed_net do
-                
-                output_queue(state)
-             else
-                state
-             end
-             
-           state = %{state | last_dt: dt}
-           
-           {pkgs, final_parser_state} = parser_mod.get_packages(state.parser_state)
-           state = %{state | parser_state: final_parser_state}
-           
-           Enum.reduce(pkgs, state, fn {action, pkg, ver}, acc ->
-             cond do
-               MapSet.member?(@actions, action) and !acc.config.pacman_actions ->
-                 queue_append(acc, dt, action, pkg, ver)
+          state =
+            if state.last_dt &&
+                 NaiveDateTime.diff(dt, state.last_dt, :second) > state.config.timegap * 60 &&
+                 !state.config.installed_net do
+              output_queue(state)
+            else
+              state
+            end
 
-               acc.config.pacman_actions ->
-                 handle_pacman_action(acc, dt, action, pkg, ver)
+          state = %{state | last_dt: dt}
 
-               true ->
-                 acc
-             end
-           end)
+          {pkgs, final_parser_state} = parser_mod.get_packages(state.parser_state)
+          state = %{state | parser_state: final_parser_state}
+
+          Enum.reduce(pkgs, state, fn {action, pkg, ver}, acc ->
+            cond do
+              MapSet.member?(@actions, action) and !acc.config.pacman_actions ->
+                queue_append(acc, dt, action, pkg, ver)
+
+              acc.config.pacman_actions ->
+                handle_pacman_action(acc, dt, action, pkg, ver)
+
+              true ->
+                acc
+            end
+          end)
         end
 
       {:skip, new_parser_state} ->
@@ -300,14 +319,20 @@ defmodule Pkglog do
 
   defp queue_append(state, dt, action, pkg, ver) do
     # Maintain installed/removed maps for net-installed logic
-    state = 
+    state =
       case action do
-        a when a in ["installed", "installed_asdep"] -> 
+        a when a in ["installed", "installed_asdep"] ->
           %{state | installed: Map.put(state.installed, pkg, dt)}
-        "removed" -> 
-          %{state | installed: Map.delete(state.installed, pkg), 
-                    installed_previously: Map.put(state.installed_previously, pkg, dt)}
-        _ -> state
+
+        "removed" ->
+          %{
+            state
+            | installed: Map.delete(state.installed, pkg),
+              installed_previously: Map.put(state.installed_previously, pkg, dt)
+          }
+
+        _ ->
+          state
       end
 
     %{state | queue: state.queue ++ [{dt, action, pkg, ver}]}
@@ -549,61 +574,68 @@ defmodule Pkglog do
     if state.queue == [] do
       state
     else
-      
-      filtered = 
+      filtered =
         state.queue
         |> Enum.filter(fn {dt, action, pkg, ver} ->
-           filter_package(dt, action, pkg, ver, state)
+          filter_package(dt, action, pkg, ver, state)
         end)
         |> Enum.map(fn {dt, action, pkg, ver} ->
-           color = get_color(action)
-           vers_disp = display_text(action, ver, state.config.verbose)
-           {dt, pkg, vers_disp, color}
+          color = get_color(action)
+          vers_disp = display_text(action, ver, state.config.verbose)
+          {dt, pkg, vers_disp, color}
         end)
-      
+
       if filtered != [] do
-        should_print_delim = 
-          state.config.packages == [] and 
-          not state.config.installed and 
-          not state.config.installed_only
-          
-        maxlen = 
-           if state.config.nojustify do
-             1
-           else
-             Enum.map(filtered, fn {_, pkg, _, _} -> String.length(pkg) end) |> Enum.max(fn -> 1 end)
-           end
-          
-        {new_state, _} = 
+        should_print_delim =
+          state.config.packages == [] and
+            not state.config.installed and
+            not state.config.installed_only
+
+        maxlen =
+          if state.config.nojustify do
+            1
+          else
+            Enum.map(filtered, fn {_, pkg, _, _} -> String.length(pkg) end)
+            |> Enum.max(fn -> 1 end)
+          end
+
+        {new_state, _} =
           Enum.reduce(filtered, {state, 0}, fn {dt, pkg, vers, color}, {acc_state, idx} ->
-             {acc_state, printed_boot} = 
-               if !acc_state.boot_printed and NaiveDateTime.compare(dt, acc_state.boot_time) == :gt do
-                 {print_boot_marker(acc_state), true}
-               else
-                 {acc_state, false}
-               end
-             
-             if !printed_boot and idx == 0 and should_print_delim do
-               IO.puts(String.duplicate("-", 80))
-             end
-             
-             padding = if acc_state.config.nojustify, do: 0, else: maxlen
-             if acc_state.config.color do
-               IO.puts([color, "#{dt} ", String.pad_trailing(pkg, padding), " #{vers}", IO.ANSI.reset()])
-             else
-               IO.puts("#{dt} #{String.pad_trailing(pkg, padding)} #{vers}")
-             end
-             
-             {acc_state, idx + 1}
+            {acc_state, printed_boot} =
+              if !acc_state.boot_printed and NaiveDateTime.compare(dt, acc_state.boot_time) == :gt do
+                {print_boot_marker(acc_state), true}
+              else
+                {acc_state, false}
+              end
+
+            if !printed_boot and idx == 0 and should_print_delim do
+              IO.puts(String.duplicate("-", 80))
+            end
+
+            padding = if acc_state.config.nojustify, do: 0, else: maxlen
+
+            if acc_state.config.color do
+              IO.puts([
+                color,
+                "#{dt} ",
+                String.pad_trailing(pkg, padding),
+                " #{vers}",
+                IO.ANSI.reset()
+              ])
+            else
+              IO.puts("#{dt} #{String.pad_trailing(pkg, padding)} #{vers}")
+            end
+
+            {acc_state, idx + 1}
           end)
-          
+
         %{new_state | queue: []}
       else
         %{state | queue: []}
       end
     end
   end
-  
+
   defp display_text(action, ver, verbose) do
     case action do
       a when a in ["upgraded", "downgraded"] ->
@@ -624,38 +656,50 @@ defmodule Pkglog do
   end
 
   defp filter_package(dt, action, pkg, _ver, state) do
-     
-     keep = 
-       cond do
-         state.config.updated_only and action != "upgraded" and action != "downgraded" -> false
-         state.config.installed and !(action in ["installed", "installed_asdep", "removed"]) -> false
-         state.config.installed_only and !(action in ["installed", "installed_asdep"]) -> false
+    keep =
+      cond do
+        state.config.updated_only and action != "upgraded" and action != "downgraded" ->
+          false
 
-         state.config.explicit_net and !MapSet.member?(state.explicit_pkgs, pkg) -> false
-         
-         state.config.packages != [] ->
-            Enum.any?(state.config.packages, fn arg_pkg ->
-              if state.config.glob || state.config.regex do
-                Regex.run(arg_pkg, pkg)
-              else
-                pkg == arg_pkg
-              end
-            end)
-         
-         state.config.installed_net ->
-            pkgdt = Map.get(state.installed, pkg)
-            pkgdt_rm = Map.get(state.installed_previously, pkg)
-            
-            cond do
-               !pkgdt || NaiveDateTime.compare(dt, pkgdt) == :lt -> false
-               pkgdt_rm && NaiveDateTime.diff(pkgdt, pkgdt_rm, :day) < state.config.installed_net_days -> false
-               true -> true
+        state.config.installed and !(action in ["installed", "installed_asdep", "removed"]) ->
+          false
+
+        state.config.installed_only and !(action in ["installed", "installed_asdep"]) ->
+          false
+
+        state.config.explicit_net and !MapSet.member?(state.explicit_pkgs, pkg) ->
+          false
+
+        state.config.packages != [] ->
+          Enum.any?(state.config.packages, fn arg_pkg ->
+            if state.config.glob || state.config.regex do
+              Regex.run(arg_pkg, pkg)
+            else
+              pkg == arg_pkg
             end
-            
-         true -> true
-       end
-       
-     keep
+          end)
+
+        state.config.installed_net ->
+          pkgdt = Map.get(state.installed, pkg)
+          pkgdt_rm = Map.get(state.installed_previously, pkg)
+
+          cond do
+            !pkgdt || NaiveDateTime.compare(dt, pkgdt) == :lt ->
+              false
+
+            pkgdt_rm &&
+                NaiveDateTime.diff(pkgdt, pkgdt_rm, :day) < state.config.installed_net_days ->
+              false
+
+            true ->
+              true
+          end
+
+        true ->
+          true
+      end
+
+    keep
   end
 
   defp get_color("installed"), do: IO.ANSI.green()
@@ -667,35 +711,39 @@ defmodule Pkglog do
   defp get_color("marked_explicit"), do: IO.ANSI.white()
   defp get_color("marked_dependency"), do: IO.ANSI.white()
   defp get_color(_), do: IO.ANSI.white()
-  
+
   defp print_boot_marker(state, opts \\ []) do
-     if !state.boot_printed and state.boot_str do
-       trailing = Keyword.get(opts, :trailing, true)
-       should_print_delim = 
-          state.config.packages == [] and 
-          not state.config.installed and 
+    if !state.boot_printed and state.boot_str do
+      trailing = Keyword.get(opts, :trailing, true)
+
+      should_print_delim =
+        state.config.packages == [] and
+          not state.config.installed and
           not state.config.installed_only
 
-       if should_print_delim do
-         IO.puts(String.duplicate("-", 80))
-       end
-       IO.puts(state.boot_str)
-       if should_print_delim and trailing do
-         IO.puts(String.duplicate("-", 80))
-       end
-       %{state | boot_printed: true}
-     else
-       state
-     end
+      if should_print_delim do
+        IO.puts(String.duplicate("-", 80))
+      end
+
+      IO.puts(state.boot_str)
+
+      if should_print_delim and trailing do
+        IO.puts(String.duplicate("-", 80))
+      end
+
+      %{state | boot_printed: true}
+    else
+      state
+    end
   end
 
   defp format_boot_time(dt) do
-     # Format NaiveDateTime to "YYYY-MM-DD HH:MM:SS"
-     # NaiveDateTime.to_string usually works but defaults to ISO which might have T.
-     # We want space.
-     dt
-     |> NaiveDateTime.truncate(:second)
-     |> NaiveDateTime.to_string()
-     |> String.replace("T", " ")
+    # Format NaiveDateTime to "YYYY-MM-DD HH:MM:SS"
+    # NaiveDateTime.to_string usually works but defaults to ISO which might have T.
+    # We want space.
+    dt
+    |> NaiveDateTime.truncate(:second)
+    |> NaiveDateTime.to_string()
+    |> String.replace("T", " ")
   end
 end

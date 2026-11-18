@@ -1,2 +1,29 @@
 [tools]
 elixir = "latest"
+
+[tasks.build]
+description = "Build the pkglog escript"
+run = "mix escript.build"
+sources = ["mix.exs", "lib/**/*.ex"]
+outputs = ["pkglog"]
+
+[tasks.test]
+description = "Run the test suite"
+run = "mix test"
+
+[tasks.format]
+description = "Format the code"
+run = "mix format"
+
+[tasks.check]
+description = "Check formatting, compile warnings, and run tests"
+run = [
+  "mix format --check-formatted",
+  "mix compile --warnings-as-errors --force",
+  "mix test",
+]
+
+[tasks.run]
+description = "Build and run pkglog with the given arguments"
+depends = ["build"]
+run = "./pkglog"

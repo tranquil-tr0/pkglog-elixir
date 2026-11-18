@@ -25,19 +25,18 @@ defmodule Pkglog.Parsers.Pacman do
   def parse_line(line, _state) do
     # Expected format: [2022-10-25T08:52:12-0400] [ALPM] upgraded ...
     # Or old: [2022-10-25 08:52:12-0400] ...
-    
+
     with [dts_raw, linetype, rest] <- String.split(line, " ", parts: 3),
          true <- linetype in ["[ALPM]", "[PACMAN]"] do
-      
-      dts = 
+      dts =
         dts_raw
         |> String.trim_leading(<<0>>)
         |> String.trim()
         |> String.trim_leading("[")
         |> String.trim_trailing("]")
-      
+
       # Handle space instead of T if present (old format)
-      dts = 
+      dts =
         if String.length(dts) > 10 and String.at(dts, 10) == " " do
           String.replace(dts, " ", "T", global: false)
         else
@@ -47,11 +46,13 @@ defmodule Pkglog.Parsers.Pacman do
       case DateTime.from_iso8601(dts) do
         {:ok, dt, offset_seconds} ->
           # Convert to naive wall time (apply offset to UTC)
-          naive = 
-             dt
-             |> DateTime.to_naive()
-             |> NaiveDateTime.add(offset_seconds, :second)
+          naive =
+            dt
+            |> DateTime.to_naive()
+            |> NaiveDateTime.add(offset_seconds, :second)
+
           {:ok, naive, rest}
+
         _ ->
           {:skip, ""}
       end
