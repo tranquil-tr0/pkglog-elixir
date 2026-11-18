@@ -1,0 +1,5 @@
+[2020-01-01T12:00:00+0000] [PACMAN] Running '/usr/bin/pacman --sync -- foo'
+[2020-01-01T12:00:00+0000] [ALPM] transaction started
+[2020-01-01T12:00:00+0000] [ALPM] installed libdep (1.0-1)
+[2020-01-01T12:00:00+0000] [ALPM] installed foo (2.0-1)
+[2020-01-01T12:00:00+0000] [ALPM] transaction completed

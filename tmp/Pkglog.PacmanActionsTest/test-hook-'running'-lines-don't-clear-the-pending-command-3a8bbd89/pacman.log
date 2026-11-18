@@ -1,0 +1,8 @@
+[2026-11-17T18:56:30-0500] [PACMAN] Running '/usr/bin/pacman --sync -- micro-git'
+[2026-11-17T18:56:30-0500] [ALPM] running '05-snap-pac-pre.hook'...
+[2026-11-17T18:56:30-0500] [ALPM-SCRIPTLET] ==> root: 636
+[2026-11-17T18:56:30-0500] [ALPM] transaction started
+[2026-11-17T18:56:30-0500] [ALPM] removed micro (2.0.15-3.1)
+[2026-11-17T18:56:30-0500] [ALPM] installed micro-git (2.0.15.r106.g3281b6c-1)
+[2026-11-17T18:56:30-0500] [ALPM] transaction completed
+[2026-11-17T18:56:30-0500] [ALPM] running '35-systemd-update.hook'...

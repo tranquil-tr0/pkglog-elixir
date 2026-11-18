@@ -1,0 +1,4 @@
+[2020-01-01T12:00:00+0000] [PACMAN] Running 'pacman -U /tmp/baz-1.0-1-x86_64.pkg.tar.zst'
+[2020-01-01T12:00:00+0000] [ALPM] transaction started
+[2020-01-01T12:00:00+0000] [ALPM] installed baz (1.0-1)
+[2020-01-01T12:00:00+0000] [ALPM] transaction completed

@@ -1,0 +1,8 @@
+[2020-01-01T12:00:00+0000] [PACMAN] Running 'pacman -S foo-git'
+[2020-01-01T12:00:00+0000] [ALPM] running 'pre.hook'...
+[2020-01-01T12:00:00+0000] [ALPM-SCRIPTLET] ==> some output
+[2020-01-01T12:00:00+0000] [ALPM] transaction started
+[2020-01-01T12:00:00+0000] [ALPM] removed foo (1.0-1)
+[2020-01-01T12:00:00+0000] [ALPM] installed foo-git (1.0.r1-1)
+[2020-01-01T12:00:00+0000] [ALPM] transaction completed
+[2020-01-01T12:00:00+0000] [ALPM] running 'post.hook'...

@@ -438,8 +438,17 @@ defmodule Pkglog do
         # Exact match (regular package name), or for -U/--upgrade commands
         # where the command line refers to a package archive file or URL in
         # the format "name[-ver-rel-arch].pkg.tar.zst"
-        name == pkg or (cmd.op == :upgrade and upgrade_archive_match?(name, pkg))
+        name == pkg or (cmd.op == :sync and sync_repo_match?(name, pkg)) or
+          (cmd.op == :upgrade and upgrade_archive_match?(name, pkg))
       end)
+  end
+
+  # Matches a sync target given with a repository prefix ("repo/name")
+  defp sync_repo_match?(ref, pkg) do
+    case String.split(ref, "/", parts: 2) do
+      [_repo, name] -> name == pkg
+      _ -> false
+    end
   end
 
   # Matches a package archive reference whose file name begins with the
