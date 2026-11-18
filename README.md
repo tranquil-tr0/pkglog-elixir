@@ -72,7 +72,7 @@ options](#default-options).
 |----------|-----------------------|-------------------|
 |apt       |`/var/log/apt/history*`|Debian, Ubuntu, etc|
 |dnf       |`/var/log/dnf.rpm.log` |RedHat, Fedora, etc|
-|pacman    |`/var/log/pacman.log`  |Arch, Manjaro, etc |
+|pacman    |`LogFile` from `pacman.conf` (`/var/log/pacman.log`)|Arch, Manjaro, etc |
 |xbps      |`/var/log/socklog/xbps/current`|Void Linux |
 |zypper    |`/var/log/zypp/history`|OpenSUSE           |
 

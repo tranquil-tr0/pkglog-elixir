@@ -75,10 +75,10 @@ defmodule Pkglog do
 
   @doc """
   Return a MapSet of packages currently explicitly installed, according to
-  pacman's local database (/var/lib/pacman/local/*/desc). Install Reason 0
+  pacman's local database (<DBPath>/local/*/desc). Install Reason 0
   means explicitly installed; 1 means installed as a dependency.
   """
-  def get_explicit_packages(db_dir \\ "/var/lib/pacman/local") do
+  def get_explicit_packages(db_dir \\ Path.join(Pacman.dbpath(), "local")) do
     case File.ls(db_dir) do
       {:ok, entries} ->
         Enum.reduce(entries, MapSet.new(), fn entry, acc ->

@@ -2,7 +2,21 @@ defmodule Pkglog.Parsers.Pacman do
   @behaviour Pkglog.Parser
 
   @impl true
-  def logfile(), do: "/var/log/pacman.log"
+  def logfile(), do: conf("LogFile", "/var/log/pacman.log")
+
+  def dbpath(), do: conf("DBPath", "/var/lib/pacman/")
+
+  # Ask pacman-conf rather than parsing pacman.conf ourselves, so LogFile,
+  # DBPath, RootDir and Include resolve exactly as pacman resolves them.
+  defp conf(directive, default) do
+    with exe when exe != nil <- System.find_executable("pacman-conf"),
+         {out, 0} <- System.cmd(exe, [directive]),
+         value when value != "" <- String.trim_trailing(out, "\n") do
+      value
+    else
+      _ -> default
+    end
+  end
 
   @impl true
   def initial_state(), do: ""

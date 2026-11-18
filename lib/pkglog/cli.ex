@@ -151,7 +151,7 @@ defmodule Pkglog.CLI do
        {"-v", "--verbose", nil, ["be verbose, describe upgrades/downgrades"], nil},
        {"-j", "--nojustify", nil, ["don't right justify version numbers"], nil},
        {"-c", "--no-color", nil, ["do not color output"], nil},
-       {"-p", "--path", "PATH", ["alternate log path"], "/var/log/pacman.log"}
+       {"-p", "--path", "PATH", ["alternate log path"], "LogFile from pacman.conf"}
      ]},
     {"General",
      [
